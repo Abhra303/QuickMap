@@ -14,8 +14,8 @@ type request struct {
 
 type response struct {
 	Code  int         `json:"code"`
-	Value interface{} `json:"value,omitempty"`
-	Err   string      `json:"error,omitempty"`
+	Value interface{} `json:"value"`
+	Err   string      `json:"error"`
 }
 
 func badReqResponse(c *gin.Context, err error) {
