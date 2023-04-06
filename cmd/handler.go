@@ -39,18 +39,18 @@ func v1ExecCommandHandler(c *gin.Context) {
 	}
 	switch e := expr.(type) {
 	case *parse.SetExpr:
-		err = Store.Set(e.Key, e.Value, e.Expiry, e.Condition)
+		created, err := Store.Set(e.Key, e.Value, e.Expiry, e.Condition)
 		if err != nil {
 			badReqResponse(c, err)
 			return
 		}
-		c.JSON(http.StatusCreated, &response{Code: http.StatusCreated})
-	case *parse.GetExpr:
-		value, ok := Store.Get(e.Key)
-		if !ok {
-			badReqResponse(c, err)
-			return
+		if created {
+			c.JSON(http.StatusCreated, &response{Code: http.StatusCreated})
+		} else {
+			c.JSON(http.StatusOK, &response{Code: http.StatusOK})
 		}
+	case *parse.GetExpr:
+		value := Store.Get(e.Key)
 		c.JSON(http.StatusOK, &response{Code: http.StatusOK, Value: value})
 	case *parse.QPushExpr:
 		err = Store.QPush(e.Key, e.Values)

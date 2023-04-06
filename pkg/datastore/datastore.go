@@ -37,8 +37,8 @@ type datastore struct {
 }
 
 type DataStore interface {
-	Set(key, value interface{}, expiry time.Duration, condition SetCondition) error
-	Get(key interface{}) (interface{}, bool)
+	Set(key, value interface{}, expiry time.Duration, condition SetCondition) (bool, error)
+	Get(key interface{}) interface{}
 	QPush(key interface{}, value ...interface{}) error
 	QPop(key interface{}) (interface{}, error)
 	BQPop(key interface{}, duration time.Duration) (interface{}, error)
@@ -51,11 +51,11 @@ func NewDataStore() *datastore {
 	}
 }
 
-func (d *datastore) Set(key, value interface{}, expiry time.Duration, condition SetCondition) error {
+func (d *datastore) Set(key, value interface{}, expiry time.Duration, condition SetCondition) (bool, error) {
 	d.store.mut.Lock()
 	defer d.store.mut.Unlock()
 	if value == nil {
-		return errors.New("value can't be nil")
+		return false, errors.New("value can't be nil")
 	}
 	if d.data == nil {
 		d.data = make(map[interface{}]Element)
@@ -64,30 +64,30 @@ func (d *datastore) Set(key, value interface{}, expiry time.Duration, condition 
 
 	switch condition {
 	case SetIfNotExists:
-		if !ok || time.Now().After(elem.ts.Add(elem.expiry*time.Second)) {
+		if !ok || (elem.expiry != 0 && time.Now().After(elem.ts.Add(elem.expiry*time.Second))) {
 			d.data[key] = Element{value: value, ts: time.Now(), expiry: expiry}
-			return nil
+			return true, nil
 		}
 	case SetIfExists:
-		if ok && time.Now().Before(elem.ts.Add(elem.expiry*time.Second)) {
+		if ok && (elem.expiry == 0 || time.Now().Before(elem.ts.Add(elem.expiry*time.Second))) {
 			d.data[key] = Element{value: value, ts: time.Now(), expiry: expiry}
-			return nil
+			return true, nil
 		}
 	case Default:
 		d.data[key] = Element{value: value, ts: time.Now(), expiry: expiry}
-		return nil
+		return true, nil
 	default:
-		return errors.Newf("unsupported condition for set: %d", condition)
+		return false, errors.Newf("unsupported condition for set: %d", condition)
 	}
-	return nil
+	return false, nil
 }
 
-func (d *datastore) Get(key interface{}) (interface{}, bool) {
+func (d *datastore) Get(key interface{}) interface{} {
 	elem, ok := d.data[key]
-	if ok && time.Now().After(elem.ts.Add(elem.expiry*time.Second)) {
-		return elem.value, false
+	if ok && (elem.expiry == 0 || time.Now().Before(elem.ts.Add(elem.expiry*time.Second))) {
+		return elem.value
 	}
-	return elem.value, ok
+	return nil
 }
 
 func (d *datastore) QPush(key interface{}, value ...interface{}) error {
