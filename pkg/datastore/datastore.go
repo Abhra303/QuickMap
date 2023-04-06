@@ -39,7 +39,7 @@ type datastore struct {
 type DataStore interface {
 	Set(key, value interface{}, expiry time.Duration, condition SetCondition) (bool, error)
 	Get(key interface{}) interface{}
-	QPush(key interface{}, value ...interface{}) error
+	QPush(key interface{}, value []interface{}) error
 	QPop(key interface{}) (interface{}, error)
 	BQPop(key interface{}, duration time.Duration) (interface{}, error)
 }
@@ -90,12 +90,12 @@ func (d *datastore) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (d *datastore) QPush(key interface{}, value ...interface{}) error {
+func (d *datastore) QPush(key interface{}, values []interface{}) error {
 	d.queue.mut.Lock()
 	defer d.queue.mut.Unlock()
 	if key == nil {
 		return errors.New("invalid key - can't be nil")
-	} else if len(value) == 0 {
+	} else if len(values) == 0 {
 		return errors.Newf("no value provided for the key \"%v\"", key)
 	}
 	if d.list == nil {
@@ -105,7 +105,7 @@ func (d *datastore) QPush(key interface{}, value ...interface{}) error {
 	if !ok || elem == nil {
 		d.list[key] = make([]interface{}, 0, 6)
 	}
-	d.list[key] = append(d.list[key], value...)
+	d.list[key] = append(d.list[key], values...)
 	return nil
 }
 
