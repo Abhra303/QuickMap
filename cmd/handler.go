@@ -19,7 +19,8 @@ type response struct {
 }
 
 func badReqResponse(c *gin.Context, err error) {
-	c.JSON(http.StatusBadRequest, &response{Code: http.StatusBadRequest, Err: err.Error()})
+	c.Error(err)
+	c.AbortWithStatusJSON(http.StatusBadRequest, &response{Code: http.StatusBadRequest, Err: err.Error()})
 }
 
 func v1ExecCommandHandler(c *gin.Context) {
@@ -28,45 +29,53 @@ func v1ExecCommandHandler(c *gin.Context) {
 
 	if err = c.BindJSON(&req); err != nil {
 		badReqResponse(c, err)
+		return
 	}
 
 	expr, err := parse.ParseCommand(req.Command)
 	if err != nil {
 		badReqResponse(c, err)
+		return
 	}
 	switch e := expr.(type) {
 	case *parse.SetExpr:
 		err = Store.Set(e.Key, e.Value, e.Expiry, e.Condition)
 		if err != nil {
 			badReqResponse(c, err)
+			return
 		}
 		c.JSON(http.StatusCreated, &response{Code: http.StatusCreated})
 	case *parse.GetExpr:
 		value, ok := Store.Get(e.Key)
 		if !ok {
 			badReqResponse(c, err)
+			return
 		}
 		c.JSON(http.StatusOK, &response{Code: http.StatusOK, Value: value})
 	case *parse.QPushExpr:
 		err = Store.QPush(e.Key, e.Values)
 		if err != nil {
 			badReqResponse(c, err)
+			return
 		}
 		c.JSON(http.StatusCreated, &response{Code: http.StatusCreated})
 	case *parse.QPopExpr:
 		value, err := Store.QPop(e.Key)
 		if err != nil {
 			badReqResponse(c, err)
+			return
 		}
 		c.JSON(http.StatusOK, &response{Code: http.StatusOK, Value: value})
 	case *parse.BQPopExpr:
 		value, err := Store.BQPop(e.Key, e.Timeout)
 		if err != nil {
 			badReqResponse(c, err)
+			return
 		}
 		c.JSON(http.StatusOK, &response{Code: http.StatusOK, Value: value})
 	default:
 		err = errors.New("unknown expression type")
 		badReqResponse(c, err)
+		return
 	}
 }
