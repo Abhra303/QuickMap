@@ -109,14 +109,14 @@ func (e *QPushExpr) Usage() string {
 }
 
 func (e *QPopExpr) Usage() string {
-	return `Usage: QPop <key>
+	return `Usage: QPOP <key>
 
 	Returns the last inserted value from the queue with the <key>.
 	`
 }
 
 func (e *BQPopExpr) Usage() string {
-	return `Usage: BQPop <key> <timeout>
+	return `Usage: BQPOP <key> <timeout>
 	
 	[Experimental] Blocking queue read operation that blocks the thread
 	until a value is read from the queue.
