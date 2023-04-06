@@ -188,6 +188,6 @@ Note that the command name is case-sensitive and all the commands are required t
 
 ## Future Improvements
 
-Although this is a in-memory key-value store, it is far behind the standard stores in terms of efficieny, optimization and scaling (e.g. [redis](https://github.com/redis/redis), Dgraph's [Ristretto](https://github.com/dgraph-io/ristretto). This is the reason I put the endpoint under `api/v1`. I will try to match this repository to the standard ones.
+Although this is a in-memory key-value store, it is far behind the standard stores in terms of efficieny, optimization and scaling (e.g. [redis](https://github.com/redis/redis), Dgraph's [Ristretto](https://github.com/dgraph-io/ristretto)). This is the reason I put the endpoint under `api/v1`. I will try to match this repository to the standard ones.
 
 Currently the project doesn't have any unit tests. So I have to add tests also ;)
