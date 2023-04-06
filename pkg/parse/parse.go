@@ -221,7 +221,15 @@ func ParseCommand(cmd string) (Expr, error) {
 		key := detectLiteralType(words[1])
 		return &QPopExpr{Key: key}, nil
 	case ExprTypeBQPop:
-		return nil, errors.Wrap(UnsupportedCommandError, "BQPop is currently under developing")
+		if l != 3 {
+			return nil, errors.Wrap(InvalidCommandError, "BQPOP should have exactly three arguments")
+		}
+		key := detectLiteralType(words[1])
+		d, err := strconv.ParseFloat(words[2], 64)
+		if err != nil {
+			return nil, errors.Wrapf(InvalidCommandError, "non float expiry time \"%s\"", words[2])
+		}
+		return &BQPopExpr{Key: key, Timeout: time.Duration(d)}, nil
 	default:
 		return nil, errors.Wrap(UnknownCommandError, words[0])
 	}

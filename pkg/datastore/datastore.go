@@ -91,13 +91,13 @@ func (d *datastore) Get(key interface{}) interface{} {
 }
 
 func (d *datastore) QPush(key interface{}, values []interface{}) error {
-	d.queue.mut.Lock()
-	defer d.queue.mut.Unlock()
 	if key == nil {
 		return errors.New("invalid key - can't be nil")
 	} else if len(values) == 0 {
 		return errors.Newf("no value provided for the key \"%v\"", key)
 	}
+	d.queue.mut.Lock()
+	defer d.queue.mut.Unlock()
 	if d.list == nil {
 		d.list = make(map[interface{}][]interface{})
 	}
@@ -110,8 +110,6 @@ func (d *datastore) QPush(key interface{}, values []interface{}) error {
 }
 
 func (d *datastore) QPop(key interface{}) (interface{}, error) {
-	d.queue.mut.Lock()
-	defer d.queue.mut.Unlock()
 	if key == nil {
 		return nil, errors.New("invalid key - can't be nil")
 	}
@@ -123,11 +121,50 @@ func (d *datastore) QPop(key interface{}) (interface{}, error) {
 	if len(elem) == 0 {
 		return nil, nil
 	}
+	d.queue.mut.Lock()
+	defer d.queue.mut.Unlock()
 	value := elem[len(elem)-1]
 	d.list[key] = elem[:len(elem)-1]
 	return value, nil
 }
 
 func (d *datastore) BQPop(key interface{}, duration time.Duration) (interface{}, error) {
-	return nil, nil
+	if key == nil {
+		return nil, errors.New("invalid key - can't be nil")
+	}
+
+	d.queue.mut.Lock()
+	defer d.queue.mut.Unlock()
+	if len(d.list[key]) == 0 {
+		if duration == 0 {
+			return nil, nil
+		}
+
+		timer := time.NewTimer(duration * time.Second)
+
+		for {
+			// not the most efficient way to do this.
+			// sync.Cond could be a better solution. But seems like
+			// it is problemetic to use with timer check.
+			d.queue.mut.Unlock()
+			time.Sleep(1 * time.Second)
+			d.queue.mut.Lock()
+			select {
+			case <-timer.C:
+				return nil, nil
+			default:
+			}
+			if len(d.list[key]) > 0 {
+				break
+			}
+
+		}
+		if !timer.Stop() {
+			<-timer.C
+		}
+	}
+
+	value := d.list[key][len(d.list[key])-1]
+	d.list[key] = d.list[key][:len(d.list[key])-1]
+	return value, nil
 }
